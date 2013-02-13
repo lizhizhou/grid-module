@@ -2,6 +2,8 @@
  * Demonstration of the use of debugfs with Lophilo
  *
  * Author: Ricky Ng-Adam <rngadam@lophilo.com>
+ *         Zhizhou Li <lzz@meteroi.com>
+ *
 
  Copyright 2012 Lophilo
 
@@ -28,6 +30,7 @@
 #include <asm/uaccess.h>  /* for put_user */
 #include <linux/mm.h> // remap_pfn_range
 #include <asm/page.h> // page_to_pfn
+#include <linux/slab.h>   /* kmalloc() */
 
 // from linux/arch/arm/mach-at91/board-tabby.c
 extern void __iomem *fpga_cs0_base;
@@ -45,6 +48,16 @@ extern void __iomem *fpga_cs3_base;
 
 #define SYS_PHYS_ADDR 0x10000000
 #define MOD_PHYS_ADDR 0x20000000
+
+#define SYS_SUBSYSTEM_ID       0
+#define MOD_SUBSYSTEM_ID       1
+#define FPGA_DATA_ID           2
+#define FPGA_DOWNLOAD_ID       3
+
+#define FPGA_DOWNLOAD_BUFFER_SIZE 500*1024
+
+static char* fpga_download_buffer   = NULL;
+static int   fpga_buffer_index      = 0;
 
 struct subsystem {
 	u32 id;
@@ -74,16 +87,24 @@ struct file_operations fops_mem = {
 static struct subsystem subsystems[MAX_SUBSYSTEMS];
 
 static struct subsystem sys_subsystem = {
-	.id = 0,
+	.id = SYS_SUBSYSTEM_ID,
 	.size = 0x204,
 	.paddr = SYS_PHYS_ADDR,
 	.offset = 0
 };
 
 static struct subsystem mod_subsystem = {
-	.id = 1,
+	.id = MOD_SUBSYSTEM_ID,
 	.paddr = MOD_PHYS_ADDR,
 	.offset = 0
+};
+
+static struct subsystem fpga_data = {
+    .id = FPGA_DATA_ID,
+};
+
+static struct subsystem fpga_download = {
+    .id = FPGA_DOWNLOAD_ID,
 };
 
 char registry[MAX_REGISTRY_SIZE];
@@ -95,6 +116,7 @@ static struct debugfs_blob_wrapper registry_blob = {
 struct resource * fpga;
 
 static struct dentry *lophilo_dentry;
+static struct dentry *fpga_dentry;
 
 char parent_name[MAX_PARENT_NAME]; // for generating names
 
@@ -205,6 +227,160 @@ void create_registry_entry(u8 size, char* parent_name, char* name, u32 addr, u32
 	CREATE_CHANNEL_FILE(32, "power", 0x200);
 }
 
+// FPGA config
+#define PIOA_PER         0xFFFFF200// PIO Enable Register Write-only
+#define PIOA_OER         0xFFFFF210// Output Enable Register Write-only
+#define PIOA_SODR        0xFFFFF230// Set Output Data Register Write-only
+#define PIOA_CODR        0xFFFFF234// Clear Output Data Register Write-only
+
+#define PIOB_PER         0xFFFFF400// PIO Enable Register Write-only
+#define PIOB_OER         0xFFFFF410// Output Enable Register Write-only
+#define PIOB_ODR         0xFFFFF414// Output Disable Register Write-only
+#define PIOB_SODR        0xFFFFF430// Set Output Data Register Write-only
+#define PIOB_CODR        0xFFFFF434// Clear Output Data Register Write-only
+#define PIOB_PDSR        0xFFFFF43C// Pin Data Status Register Read-only
+
+volatile unsigned long __iomem  * rPIOA_PER;
+volatile unsigned long __iomem  * rPIOA_OER;
+volatile unsigned long __iomem  * rPIOA_SODR;
+volatile unsigned long __iomem  * rPIOA_CODR;
+
+volatile unsigned long __iomem  * rPIOB_PER;
+volatile unsigned long __iomem  * rPIOB_OER;
+volatile unsigned long __iomem  * rPIOB_ODR;
+volatile unsigned long __iomem  * rPIOB_SODR;
+volatile unsigned long __iomem  * rPIOB_CODR;
+volatile unsigned long __iomem  * rPIOB_PDSR;
+
+void GRID_RESET(void)
+{
+    *rPIOA_CODR = (1 << 27);
+}
+void GRID_UNRESET(void)
+{
+    *rPIOA_SODR = (1 << 27);
+}
+
+void FPGA_CONF_N(void)
+{
+    *rPIOB_CODR = (1 << 16);
+}
+void FPGA_CONF_P(void)
+{
+    *rPIOB_SODR = (1 << 16);
+}
+void FPGA_DCLK_N(void)
+{
+    *rPIOB_CODR = (1 << 17);
+}
+void FPGA_DCLK_P(void)
+{
+    *rPIOB_SODR = (1 << 17);
+}
+void FPGA_DATA_N(void)
+{
+    *rPIOB_CODR = (1 << 15);
+}
+void FPGA_DATA_P(void)
+{
+    *rPIOB_SODR = (1 << 15);
+}
+int FPGA_DONE(void)
+{
+    return((*rPIOB_PDSR >> 14)&(0x1));
+}
+int FPGA_STAT(void)
+{
+    return((*rPIOB_PDSR >> 18)&(0x1));
+}
+//int SYS_RESET(void)
+//{
+//    rPIOA_CODR = (1 << 29);
+//}
+//int SYS_UNRESET(void)
+//{
+//    rPIOA_SODR = (1 << 29);
+//}
+//int BTNDIS_N(void)
+//{
+//    rPIOB_OER = (1 << 2);
+//}
+//int BTNDIS_P(void)
+//{
+//    rPIOB_ODR = (1 << 2);
+//}
+
+void init_fpga_config_io(void)
+{
+    request_mem_region(0xFFFFF200,0x400,"fpga region");
+    rPIOA_PER  = (volatile unsigned long __iomem  *) ioremap(PIOA_PER,4);
+    rPIOA_OER  = (volatile unsigned long __iomem  *) ioremap(PIOA_OER,4);
+    rPIOA_SODR = (volatile unsigned long __iomem  *) ioremap(PIOA_SODR,4);
+    rPIOA_CODR = (volatile unsigned long __iomem  *) ioremap(PIOA_CODR,4);
+
+    rPIOB_PER  = (volatile unsigned long __iomem  *) ioremap(PIOB_PER,4);
+    rPIOB_OER  = (volatile unsigned long __iomem  *) ioremap(PIOB_OER,4);
+    rPIOB_ODR  = (volatile unsigned long __iomem  *) ioremap(PIOB_ODR,4);
+    rPIOB_SODR = (volatile unsigned long __iomem  *) ioremap(PIOB_SODR,4);
+    rPIOB_CODR = (volatile unsigned long __iomem  *) ioremap(PIOB_CODR,4);
+    rPIOB_PDSR = (volatile unsigned long __iomem  *) ioremap(PIOB_PDSR,4);
+
+}
+
+void FPGA_Config(unsigned char* gridFilebuffer, int gridFileSize)
+{
+    int i;
+    unsigned char buf, cnt;
+
+    *rPIOA_PER = (1 << 27);
+    *rPIOA_OER = (1 << 27);
+    GRID_RESET();
+
+    *rPIOB_PER = (1 << 18) + (1 << 17) + (1 << 16) + (1 << 15) + (1 << 14);
+    *rPIOB_OER = (1 << 17) + (1 << 16) + (1 << 15);
+    *rPIOB_ODR = (1 << 18) + (1 << 14);
+
+    FPGA_CONF_N();
+
+    FPGA_CONF_P();
+
+    while(!FPGA_STAT());
+
+    printk("Start config FPGA [");
+
+    for(i = 0; i <= gridFileSize; i++)
+    {
+        buf = *(gridFilebuffer + i);
+
+        for(cnt = 0; cnt < 8; cnt++)
+        {
+            if(((buf>>(cnt))&(0x1))==0x1)
+            {
+                FPGA_DATA_P();
+            }
+            else
+            {
+                FPGA_DATA_N();
+            }
+            FPGA_DCLK_P();
+            FPGA_DCLK_N();
+        }
+
+        if(FPGA_DONE())
+        {
+            printk("]\n\r");
+            break;
+        }
+
+        if(i % 12000 == 0) printk(".");
+    }
+
+    if(!FPGA_DONE()) printk("FPGA configuration failed.\n");
+    else {
+        GRID_UNRESET();
+    }
+}
+
 static int __init
 lophilo_init(void)
 {
@@ -225,6 +401,32 @@ lophilo_init(void)
 		printk(KERN_ERR "Could not create root directory entry lophilo in debugfs");
 		return -EINVAL;
 	}
+
+    fpga_dentry = debugfs_create_dir(
+        "fpga",
+        NULL);
+    if(fpga_dentry == NULL) {
+        printk(KERN_ERR "Could not create root directory entry FPGA in debugfs");
+        return -EINVAL;
+    }
+
+    debugfs_create_file(
+        "data",
+        S_IRWXU | S_IRWXG | S_IRWXO,
+        fpga_dentry,
+        &fpga_data,
+        &fops_mem
+        );
+    debugfs_create_file(
+        "download",
+        S_IRWXU | S_IRWXG | S_IRWXO,
+        fpga_dentry,
+        &fpga_download,
+        &fops_mem
+        );
+
+    init_fpga_config_io();
+
 	//fpga = request_mem_region(FPGA_BASE_ADDR, SIZE16MB, "Lophilo FPGA LEDs");
 	sys_subsystem.vaddr = (u32) fpga_cs0_base;
 	mod_subsystem.vaddr = (u32) fpga_cs1_base;
@@ -383,6 +585,7 @@ lophilo_cleanup(void)
 {
 	printk(KERN_INFO "Lophilo module uninstalling\n");
 	debugfs_remove_recursive(lophilo_dentry);
+	debugfs_remove_recursive(fpga_dentry);
 	//release_mem_region(FPGA_BASE_ADDR, SIZE16MB);
 	return;
 }
@@ -455,12 +658,44 @@ static ssize_t device_read(struct file *filp,
 
 /*  Called when a process writes to dev file: echo "hi" > /dev/hello */
 static ssize_t device_write(struct file *filp,
-   const char *buff,
-   size_t len,
+   const char *buffer,
+   size_t length,
    loff_t *off)
 {
-   printk ("<1>Sorry, this operation isn't supported.\n");
-   return -EINVAL;
+   struct subsystem* subsystem_ptr = filp->private_data;
+
+   switch (subsystem_ptr->id)
+   {
+       case FPGA_DATA_ID:
+           if(fpga_download_buffer == NULL)
+               fpga_download_buffer = kmalloc(FPGA_DOWNLOAD_BUFFER_SIZE, GFP_KERNEL);
+               //buffer for download
+           if((fpga_buffer_index + length) > FPGA_DOWNLOAD_BUFFER_SIZE) {
+               printk("FPGA download buffer overflow");
+               fpga_buffer_index = 0;
+               break;
+           }
+           if(copy_from_user(fpga_download_buffer+fpga_buffer_index,buffer,length))
+                return -ENOMEM;
+           fpga_buffer_index += length;
+           break;
+       case FPGA_DOWNLOAD_ID:
+           if (fpga_buffer_index) {
+               FPGA_Config(fpga_download_buffer,fpga_buffer_index);
+               kfree(fpga_download_buffer);
+               fpga_download_buffer = NULL;
+               fpga_buffer_index = 0;
+           }
+           else
+           {
+               printk("No data to download\n");
+           }
+           break;
+       default:
+               printk("Not support yet\n");
+           break;
+   }
+   return length;
 }
 
 MODULE_LICENSE("GPL");
