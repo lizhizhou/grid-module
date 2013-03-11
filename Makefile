@@ -1,5 +1,5 @@
 ifeq ($(KERNELRELEASE),)
-KERNELDIR?= ~/lophilo/linux
+KERNELDIR?= ../linux
 PWD:=$(shell pwd)
 #CFLAGS += $(DEBFLAGS) -Wall
 #CFLAGS += -I$(LDDINC)
