@@ -449,6 +449,14 @@ lophilo_init(void)
 		&fops_mem
 		);
 
+	debugfs_create_file(
+		"irq",
+		S_IRWXU | S_IRWXG | S_IRWXO,
+		lophilo_dentry,
+		&mod_subsystem,
+		&fops_mem
+		);
+
 	for(i=0; i<4; i++) {
 		create_led(i, lophilo_dentry, sys_subsystem.vaddr);
 	}
