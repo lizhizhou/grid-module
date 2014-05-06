@@ -31,6 +31,9 @@
 #include <linux/mm.h> // remap_pfn_range
 #include <asm/page.h> // page_to_pfn
 #include <linux/slab.h>   /* kmalloc() */
+#include <linux/interrupt.h>
+#include <linux/spinlock.h>//for use spinlock
+#include <mach/gpio.h>
 
 // from linux/arch/arm/mach-at91/board-tabby.c
 extern void __iomem *fpga_cs0_base;
@@ -53,6 +56,7 @@ extern void __iomem *fpga_cs3_base;
 #define MOD_SUBSYSTEM_ID       1
 #define FPGA_DATA_ID           2
 #define FPGA_DOWNLOAD_ID       3
+#define IRQ_ID                 4
 
 #define FPGA_DOWNLOAD_BUFFER_SIZE 500*1024
 
@@ -105,6 +109,10 @@ static struct subsystem fpga_data = {
 
 static struct subsystem fpga_download = {
     .id = FPGA_DOWNLOAD_ID,
+};
+
+static struct subsystem irq = {
+    .id = IRQ_ID,
 };
 
 char registry[MAX_REGISTRY_SIZE];
@@ -381,11 +389,26 @@ void FPGA_Config(unsigned char* gridFilebuffer, int gridFileSize)
     }
 }
 
+static irqreturn_t irq_interrupt(int irq, void *dev_id, struct pt_regs *regs)
+{
+   unsigned long flag;
+   //	void* address;
+   printk("<1>interrupt\n");
+   //disable_irq(IRQ_USBD);
+//   spin_lock_irqsave(usb_lock,flag);
+
+
+//   spin_unlock_irqrestore(usb_lock,flag);
+   //enable_irq(IRQ_USBD);
+   return IRQ_HANDLED;
+}
+
 static int __init
 lophilo_init(void)
 {
 	struct dentry *lophilo_subsystem_dentry;
 	int subsystem_id = 0;
+	int result;
 
 	void* current_addr;
 	int i;
@@ -410,6 +433,68 @@ lophilo_init(void)
         return -EINVAL;
     }
 
+    /** Set pin as GPIO periph, without internal pull up */
+    at91_set_GPIO_periph(AT91_PIN_PD10,0);   //M1-EINT0
+    at91_set_GPIO_periph(AT91_PIN_PD11,0);   //M1-EINT1
+    at91_set_GPIO_periph(AT91_PIN_PD13,0);   //M1-EINT2
+    at91_set_GPIO_periph(AT91_PIN_PD14,0);   //M1-EINT3
+    at91_set_GPIO_periph(AT91_PIN_PD17,0);   //M1-EINT4
+    at91_set_GPIO_periph(AT91_PIN_PD18,0);   //M1-EINT5
+    at91_set_GPIO_periph(AT91_PIN_PD19,0);   //M1-EINT6
+    at91_set_GPIO_periph(AT91_PIN_PB0,0);    //M1-EINT7
+
+    /** Set pin as GPIO input, without internal pull up */
+    if(at91_set_gpio_input(AT91_PIN_PD10, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD10);
+    }
+    if(at91_set_gpio_input(AT91_PIN_PD11, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD11);
+    }
+    if(at91_set_gpio_input(AT91_PIN_PD13, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD13);
+    }
+    if(at91_set_gpio_input(AT91_PIN_PD14, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD14);
+    }
+    if(at91_set_gpio_input(AT91_PIN_PD17, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD17);
+    }
+    if(at91_set_gpio_input(AT91_PIN_PD18, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD18);
+    }
+    if(at91_set_gpio_input(AT91_PIN_PD19, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD19);
+    }
+    if(at91_set_gpio_input(AT91_PIN_PB0, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB0);
+    }
+
+    /** Set deglitch for pin */
+    if(at91_set_deglitch(AT91_PIN_PD10, 1)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD10);
+    }
+
+    /** Set the IRQ0 pin to Periph A */
+//    at91_set_A_periph(AT91_PIN_PD10, 0);
+    // AT91SAM9260_ID_IRQ0
+
+    /** Request IRQ for pin */
+    if(request_irq(AT91_PIN_PD10, irq_interrupt, IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, "irq_interrupt", NULL))  {
+        printk(KERN_DEBUG"Can't register IRQ %d\n", AT91_PIN_PC12);
+        return -EIO;
+    }
+
+	/* Request the IRQ */
+//    result = request_irq(AT91_PIN_PC12, irq_interrupt,
+//	IRQF_DISABLED //| IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
+//	, "IRQ_IRQ", NULL);
+//    //request_threaded_irq();
+//      if (result) {
+//        printk(KERN_INFO "usbd: can't get assigned irq %i\n",
+//        		AT91_PIN_PC12);
+//		return -EINVAL;
+//    }
+
     debugfs_create_file(
         "data",
         S_IRWXU | S_IRWXG | S_IRWXO,
@@ -424,6 +509,13 @@ lophilo_init(void)
         &fpga_download,
         &fops_mem
         );
+	debugfs_create_file(
+		"irq",
+		S_IRWXU | S_IRWXG | S_IRWXO,
+		lophilo_dentry,
+		&irq,
+		&fops_mem
+		);
 
     init_fpga_config_io();
 
@@ -449,13 +541,6 @@ lophilo_init(void)
 		&fops_mem
 		);
 
-	debugfs_create_file(
-		"irq",
-		S_IRWXU | S_IRWXG | S_IRWXO,
-		lophilo_dentry,
-		&mod_subsystem,
-		&fops_mem
-		);
 
 	for(i=0; i<4; i++) {
 		create_led(i, lophilo_dentry, sys_subsystem.vaddr);
@@ -643,22 +728,28 @@ static ssize_t device_read(struct file *filp,
 
    if(subsystem_ptr->index >= subsystem_ptr->size)
    	return 0;
+   switch (subsystem_ptr->id)
+   {
+	   case IRQ_ID:
+		   printk("Read irq\n");
+		   break;
+	   default:
+		   /* Actually put the data into the buffer */
+		   while (length && (subsystem_ptr->index < subsystem_ptr->size))  {
 
-   /* Actually put the data into the buffer */
-   while (length && (subsystem_ptr->index < subsystem_ptr->size))  {
+				/* The buffer is in the user data segment, not the kernel segment;
+				 * assignment won't work.  We have to use put_user which copies data from
+				 * the kernel data segment to the user data segment. */
+				 put_user(
+					*((char*) (subsystem_ptr->vaddr + subsystem_ptr->index)),
+					buffer++);
+				 subsystem_ptr->index++;
 
-        /* The buffer is in the user data segment, not the kernel segment;
-         * assignment won't work.  We have to use put_user which copies data from
-         * the kernel data segment to the user data segment. */
-         put_user(
-         	*((char*) (subsystem_ptr->vaddr + subsystem_ptr->index)),
-         	buffer++);
-         subsystem_ptr->index++;
-
-         length--;
-         bytes_read++;
+				 length--;
+				 bytes_read++;
+		   }
+		   break;
    }
-
    /* Most read functions return the number of bytes put into the buffer */
    return bytes_read;
 }
@@ -699,8 +790,11 @@ static ssize_t device_write(struct file *filp,
                printk("No data to download\n");
            }
            break;
+       case IRQ_ID:
+           printk("Clear irq\n");
+    	   break;
        default:
-               printk("Not support yet\n");
+           printk("Not support yet\n");
            break;
    }
    return length;
