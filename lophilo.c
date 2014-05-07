@@ -263,43 +263,53 @@ volatile unsigned long __iomem  * rPIOB_PDSR;
 void GRID_RESET(void)
 {
     *rPIOA_CODR = (1 << 27);
+    //todo: at91_set_gpio_value(AT91_PIN_PA27, 0);
 }
 void GRID_UNRESET(void)
 {
     *rPIOA_SODR = (1 << 27);
+    //at91_set_gpio_value(AT91_PIN_PA27, 1);
 }
 
 void FPGA_CONF_N(void)
 {
     *rPIOB_CODR = (1 << 16);
+    //at91_set_gpio_value(AT91_PIN_PB16, 0);
 }
 void FPGA_CONF_P(void)
 {
     *rPIOB_SODR = (1 << 16);
+    //at91_set_gpio_value(AT91_PIN_PB16, 1);
 }
 void FPGA_DCLK_N(void)
 {
     *rPIOB_CODR = (1 << 17);
+    //at91_set_gpio_value(AT91_PIN_PB17, 0);
 }
 void FPGA_DCLK_P(void)
 {
     *rPIOB_SODR = (1 << 17);
+    //at91_set_gpio_value(AT91_PIN_PB17, 1);
 }
 void FPGA_DATA_N(void)
 {
     *rPIOB_CODR = (1 << 15);
+    //at91_set_gpio_value(AT91_PIN_PB15, 0);
 }
 void FPGA_DATA_P(void)
 {
     *rPIOB_SODR = (1 << 15);
+    //at91_set_gpio_value(AT91_PIN_PB15, 1);
 }
 int FPGA_DONE(void)
 {
     return((*rPIOB_PDSR >> 14)&(0x1));
+    //retrun at91_get_gpio_value(AT91_PIN_PB14);
 }
 int FPGA_STAT(void)
 {
     return((*rPIOB_PDSR >> 18)&(0x1));
+    //retrun at91_get_gpio_value(AT91_PIN_PB18);
 }
 //int SYS_RESET(void)
 //{
@@ -341,12 +351,36 @@ void FPGA_Config(unsigned char* gridFilebuffer, int gridFileSize)
     unsigned char buf, cnt;
 
     *rPIOA_PER = (1 << 27);
+    //at91_set_GPIO_periph(AT91_PIN_PA27,0);
     *rPIOA_OER = (1 << 27);
+//    if(at91_set_gpio_output(AT91_PIN_PA27, 0)) {
+//        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD10);
+//    }
     GRID_RESET();
 
     *rPIOB_PER = (1 << 18) + (1 << 17) + (1 << 16) + (1 << 15) + (1 << 14);
+    //at91_set_GPIO_periph(AT91_PIN_PB18,0);
+    //at91_set_GPIO_periph(AT91_PIN_PB17,0);
+    //at91_set_GPIO_periph(AT91_PIN_PB16,0);
+    //at91_set_GPIO_periph(AT91_PIN_PB15,0);
+    //at91_set_GPIO_periph(AT91_PIN_PB14,0);
     *rPIOB_OER = (1 << 17) + (1 << 16) + (1 << 15);
+//    if(at91_set_gpio_output(AT91_PIN_PB17, 0)) {
+//        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB17);
+//    }
+//    if(at91_set_gpio_output(AT91_PIN_PB16, 0)) {
+//        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB16);
+//    }
+//    if(at91_set_gpio_output(AT91_PIN_PB15, 0)) {
+//        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB15);
+//    }
     *rPIOB_ODR = (1 << 18) + (1 << 14);
+    //    if(at91_set_gpio_input(AT91_PIN_PB18, 0)) {
+    //        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB15);
+    //    }
+    //    if(at91_set_gpio_input(AT91_PIN_PB18, 0)) {
+    //        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB15);
+    //    }
 
     FPGA_CONF_N();
 
@@ -473,13 +507,27 @@ lophilo_init(void)
     if(at91_set_deglitch(AT91_PIN_PD10, 1)) {
         printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD10);
     }
-
-    /** Set the IRQ0 pin to Periph A */
-//    at91_set_A_periph(AT91_PIN_PD10, 0);
-    // AT91SAM9260_ID_IRQ0
+    if(at91_set_deglitch(AT91_PIN_PD11, 1)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD11);
+    }
+    if(at91_set_deglitch(AT91_PIN_PD13, 1)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD13);
+    }
+    if(at91_set_deglitch(AT91_PIN_PD14, 1)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD14);
+    }
+    if(at91_set_deglitch(AT91_PIN_PD18, 1)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD18);
+    }
+    if(at91_set_deglitch(AT91_PIN_PD19, 1)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD19);
+    }
+    if(at91_set_deglitch(AT91_PIN_PB0, 1)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PB0);
+    }
 
     /** Request IRQ for pin */
-    if(request_irq(AT91_PIN_PD10, irq_interrupt, IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, "irq_interrupt", NULL))  {
+    if(request_irq(AT91_PIN_PD10, irq_interrupt_irq0, IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, "irq_interrupt", NULL))  {
         printk(KERN_DEBUG"Can't register IRQ %d\n", AT91_PIN_PC12);
         return -EIO;
     }
