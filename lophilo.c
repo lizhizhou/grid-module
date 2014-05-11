@@ -236,151 +236,155 @@ void create_registry_entry(u8 size, char* parent_name, char* name, u32 addr, u32
 }
 
 // FPGA config
-#define PIOA_PER         0xFFFFF200// PIO Enable Register Write-only
-#define PIOA_OER         0xFFFFF210// Output Enable Register Write-only
-#define PIOA_SODR        0xFFFFF230// Set Output Data Register Write-only
-#define PIOA_CODR        0xFFFFF234// Clear Output Data Register Write-only
-
-#define PIOB_PER         0xFFFFF400// PIO Enable Register Write-only
-#define PIOB_OER         0xFFFFF410// Output Enable Register Write-only
-#define PIOB_ODR         0xFFFFF414// Output Disable Register Write-only
-#define PIOB_SODR        0xFFFFF430// Set Output Data Register Write-only
-#define PIOB_CODR        0xFFFFF434// Clear Output Data Register Write-only
-#define PIOB_PDSR        0xFFFFF43C// Pin Data Status Register Read-only
-
-volatile unsigned long __iomem  * rPIOA_PER;
-volatile unsigned long __iomem  * rPIOA_OER;
-volatile unsigned long __iomem  * rPIOA_SODR;
-volatile unsigned long __iomem  * rPIOA_CODR;
-
-volatile unsigned long __iomem  * rPIOB_PER;
-volatile unsigned long __iomem  * rPIOB_OER;
-volatile unsigned long __iomem  * rPIOB_ODR;
-volatile unsigned long __iomem  * rPIOB_SODR;
-volatile unsigned long __iomem  * rPIOB_CODR;
-volatile unsigned long __iomem  * rPIOB_PDSR;
+//#define PIOA_PER         0xFFFFF200// PIO Enable Register Write-only
+//#define PIOA_OER         0xFFFFF210// Output Enable Register Write-only
+//#define PIOA_SODR        0xFFFFF230// Set Output Data Register Write-only
+//#define PIOA_CODR        0xFFFFF234// Clear Output Data Register Write-only
+//
+//#define PIOB_PER         0xFFFFF400// PIO Enable Register Write-only
+//#define PIOB_OER         0xFFFFF410// Output Enable Register Write-only
+//#define PIOB_ODR         0xFFFFF414// Output Disable Register Write-only
+//#define PIOB_SODR        0xFFFFF430// Set Output Data Register Write-only
+//#define PIOB_CODR        0xFFFFF434// Clear Output Data Register Write-only
+//#define PIOB_PDSR        0xFFFFF43C// Pin Data Status Register Read-only
+//
+//volatile unsigned long __iomem  * rPIOA_PER;
+//volatile unsigned long __iomem  * rPIOA_OER;
+//volatile unsigned long __iomem  * rPIOA_SODR;
+//volatile unsigned long __iomem  * rPIOA_CODR;
+//
+//volatile unsigned long __iomem  * rPIOB_PER;
+//volatile unsigned long __iomem  * rPIOB_OER;
+//volatile unsigned long __iomem  * rPIOB_ODR;
+//volatile unsigned long __iomem  * rPIOB_SODR;
+//volatile unsigned long __iomem  * rPIOB_CODR;
+//volatile unsigned long __iomem  * rPIOB_PDSR;
 
 void GRID_RESET(void)
 {
-    *rPIOA_CODR = (1 << 27);
-    //todo: at91_set_gpio_value(AT91_PIN_PA27, 0);
+    //*rPIOA_CODR = (1 << 27);
+    at91_set_gpio_value(AT91_PIN_PA27, 0);
 }
 void GRID_UNRESET(void)
 {
-    *rPIOA_SODR = (1 << 27);
-    //at91_set_gpio_value(AT91_PIN_PA27, 1);
+    //*rPIOA_SODR = (1 << 27);
+    at91_set_gpio_value(AT91_PIN_PA27, 1);
 }
 
 void FPGA_CONF_N(void)
 {
-    *rPIOB_CODR = (1 << 16);
-    //at91_set_gpio_value(AT91_PIN_PB16, 0);
+    //*rPIOB_CODR = (1 << 16);
+    at91_set_gpio_value(AT91_PIN_PB16, 0);
 }
 void FPGA_CONF_P(void)
 {
-    *rPIOB_SODR = (1 << 16);
-    //at91_set_gpio_value(AT91_PIN_PB16, 1);
+    //*rPIOB_SODR = (1 << 16);
+    at91_set_gpio_value(AT91_PIN_PB16, 1);
 }
 void FPGA_DCLK_N(void)
 {
-    *rPIOB_CODR = (1 << 17);
-    //at91_set_gpio_value(AT91_PIN_PB17, 0);
+    //*rPIOB_CODR = (1 << 17);
+    at91_set_gpio_value(AT91_PIN_PB17, 0);
 }
 void FPGA_DCLK_P(void)
 {
-    *rPIOB_SODR = (1 << 17);
-    //at91_set_gpio_value(AT91_PIN_PB17, 1);
+    //*rPIOB_SODR = (1 << 17);
+    at91_set_gpio_value(AT91_PIN_PB17, 1);
 }
 void FPGA_DATA_N(void)
 {
-    *rPIOB_CODR = (1 << 15);
-    //at91_set_gpio_value(AT91_PIN_PB15, 0);
+    //*rPIOB_CODR = (1 << 15);
+    at91_set_gpio_value(AT91_PIN_PB15, 0);
 }
 void FPGA_DATA_P(void)
 {
-    *rPIOB_SODR = (1 << 15);
-    //at91_set_gpio_value(AT91_PIN_PB15, 1);
+    //*rPIOB_SODR = (1 << 15);
+    at91_set_gpio_value(AT91_PIN_PB15, 1);
 }
 int FPGA_DONE(void)
 {
-    return((*rPIOB_PDSR >> 14)&(0x1));
-    //retrun at91_get_gpio_value(AT91_PIN_PB14);
+    //return((*rPIOB_PDSR >> 14)&(0x1));
+    return at91_get_gpio_value(AT91_PIN_PB14);
 }
 int FPGA_STAT(void)
 {
-    return((*rPIOB_PDSR >> 18)&(0x1));
-    //retrun at91_get_gpio_value(AT91_PIN_PB18);
+    //return((*rPIOB_PDSR >> 18)&(0x1));
+    return at91_get_gpio_value(AT91_PIN_PB18);
 }
-//int SYS_RESET(void)
-//{
-//    rPIOA_CODR = (1 << 29);
-//}
-//int SYS_UNRESET(void)
-//{
-//    rPIOA_SODR = (1 << 29);
-//}
-//int BTNDIS_N(void)
-//{
-//    rPIOB_OER = (1 << 2);
-//}
-//int BTNDIS_P(void)
-//{
-//    rPIOB_ODR = (1 << 2);
-//}
-
-void init_fpga_config_io(void)
+void SYS_RESET(void)
 {
-    request_mem_region(0xFFFFF200,0x400,"fpga region");
-    rPIOA_PER  = (volatile unsigned long __iomem  *) ioremap(PIOA_PER,4);
-    rPIOA_OER  = (volatile unsigned long __iomem  *) ioremap(PIOA_OER,4);
-    rPIOA_SODR = (volatile unsigned long __iomem  *) ioremap(PIOA_SODR,4);
-    rPIOA_CODR = (volatile unsigned long __iomem  *) ioremap(PIOA_CODR,4);
-
-    rPIOB_PER  = (volatile unsigned long __iomem  *) ioremap(PIOB_PER,4);
-    rPIOB_OER  = (volatile unsigned long __iomem  *) ioremap(PIOB_OER,4);
-    rPIOB_ODR  = (volatile unsigned long __iomem  *) ioremap(PIOB_ODR,4);
-    rPIOB_SODR = (volatile unsigned long __iomem  *) ioremap(PIOB_SODR,4);
-    rPIOB_CODR = (volatile unsigned long __iomem  *) ioremap(PIOB_CODR,4);
-    rPIOB_PDSR = (volatile unsigned long __iomem  *) ioremap(PIOB_PDSR,4);
-
+    //rPIOA_CODR = (1 << 29);
+    at91_set_gpio_value(AT91_PIN_PB29, 0);
 }
+void SYS_UNRESET(void)
+{
+    //rPIOA_SODR = (1 << 29);
+    at91_set_gpio_value(AT91_PIN_PB29, 1);
+}
+void BTNDIS_N(void)
+{
+    //rPIOB_OER = (1 << 2);
+    at91_set_gpio_value(AT91_PIN_PB2, 0);
+}
+void BTNDIS_P(void)
+{
+    //rPIOB_ODR = (1 << 2);
+    at91_set_gpio_value(AT91_PIN_PB2, 1);
+}
+
+//void init_fpga_config_io(void)
+//{
+//    request_mem_region(0xFFFFF200,0x400,"fpga region");
+//    rPIOA_PER  = (volatile unsigned long __iomem  *) ioremap(PIOA_PER,4);
+//    rPIOA_OER  = (volatile unsigned long __iomem  *) ioremap(PIOA_OER,4);
+//    rPIOA_SODR = (volatile unsigned long __iomem  *) ioremap(PIOA_SODR,4);
+//    rPIOA_CODR = (volatile unsigned long __iomem  *) ioremap(PIOA_CODR,4);
+//
+//    rPIOB_PER  = (volatile unsigned long __iomem  *) ioremap(PIOB_PER,4);
+//    rPIOB_OER  = (volatile unsigned long __iomem  *) ioremap(PIOB_OER,4);
+//    rPIOB_ODR  = (volatile unsigned long __iomem  *) ioremap(PIOB_ODR,4);
+//    rPIOB_SODR = (volatile unsigned long __iomem  *) ioremap(PIOB_SODR,4);
+//    rPIOB_CODR = (volatile unsigned long __iomem  *) ioremap(PIOB_CODR,4);
+//    rPIOB_PDSR = (volatile unsigned long __iomem  *) ioremap(PIOB_PDSR,4);
+//
+//}
 
 void FPGA_Config(unsigned char* gridFilebuffer, int gridFileSize)
 {
     int i;
     unsigned char buf, cnt;
 
-    *rPIOA_PER = (1 << 27);
-    //at91_set_GPIO_periph(AT91_PIN_PA27,0);
-    *rPIOA_OER = (1 << 27);
-//    if(at91_set_gpio_output(AT91_PIN_PA27, 0)) {
-//        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD10);
-//    }
+    //*rPIOA_PER = (1 << 27);
+    at91_set_GPIO_periph(AT91_PIN_PA27,0);
+    //*rPIOA_OER = (1 << 27);
+    if(at91_set_gpio_output(AT91_PIN_PA27, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD10);
+    }
     GRID_RESET();
 
-    *rPIOB_PER = (1 << 18) + (1 << 17) + (1 << 16) + (1 << 15) + (1 << 14);
-    //at91_set_GPIO_periph(AT91_PIN_PB18,0);
-    //at91_set_GPIO_periph(AT91_PIN_PB17,0);
-    //at91_set_GPIO_periph(AT91_PIN_PB16,0);
-    //at91_set_GPIO_periph(AT91_PIN_PB15,0);
-    //at91_set_GPIO_periph(AT91_PIN_PB14,0);
-    *rPIOB_OER = (1 << 17) + (1 << 16) + (1 << 15);
-//    if(at91_set_gpio_output(AT91_PIN_PB17, 0)) {
-//        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB17);
-//    }
-//    if(at91_set_gpio_output(AT91_PIN_PB16, 0)) {
-//        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB16);
-//    }
-//    if(at91_set_gpio_output(AT91_PIN_PB15, 0)) {
-//        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB15);
-//    }
-    *rPIOB_ODR = (1 << 18) + (1 << 14);
-    //    if(at91_set_gpio_input(AT91_PIN_PB18, 0)) {
-    //        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB15);
-    //    }
-    //    if(at91_set_gpio_input(AT91_PIN_PB18, 0)) {
-    //        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB15);
-    //    }
+    //*rPIOB_PER = (1 << 18) + (1 << 17) + (1 << 16) + (1 << 15) + (1 << 14);
+    at91_set_GPIO_periph(AT91_PIN_PB18,0);
+    at91_set_GPIO_periph(AT91_PIN_PB17,0);
+    at91_set_GPIO_periph(AT91_PIN_PB16,0);
+    at91_set_GPIO_periph(AT91_PIN_PB15,0);
+    at91_set_GPIO_periph(AT91_PIN_PB14,0);
+    //*rPIOB_OER = (1 << 17) + (1 << 16) + (1 << 15);
+    if(at91_set_gpio_output(AT91_PIN_PB17, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB17);
+    }
+    if(at91_set_gpio_output(AT91_PIN_PB16, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB16);
+    }
+    if(at91_set_gpio_output(AT91_PIN_PB15, 0)) {
+        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB15);
+    }
+    //*rPIOB_ODR = (1 << 18) + (1 << 14);
+	if(at91_set_gpio_input(AT91_PIN_PB18, 0)) {
+		printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB18);
+	}
+	if(at91_set_gpio_input(AT91_PIN_PB14, 0)) {
+		printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB14);
+	}
 
     FPGA_CONF_N();
 
@@ -423,7 +427,7 @@ void FPGA_Config(unsigned char* gridFilebuffer, int gridFileSize)
     }
 }
 
-static irqreturn_t irq_interrupt(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t irq_interrupt_irq0(int irq, void *dev_id, struct pt_regs *regs)
 {
    unsigned long flag;
    //	void* address;
@@ -565,7 +569,7 @@ lophilo_init(void)
 		&fops_mem
 		);
 
-    init_fpga_config_io();
+    //init_fpga_config_io();
 
 	//fpga = request_mem_region(FPGA_BASE_ADDR, SIZE16MB, "Lophilo FPGA LEDs");
 	sys_subsystem.vaddr = (u32) fpga_cs0_base;
