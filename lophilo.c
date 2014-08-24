@@ -59,7 +59,14 @@ extern void __iomem *fpga_cs3_base;
 #define MOD_SUBSYSTEM_ID       1
 #define FPGA_DATA_ID           2
 #define FPGA_DOWNLOAD_ID       3
-#define IRQ_ID                 4
+#define IRQ_0_ID               4
+#define IRQ_1_ID               5
+#define IRQ_2_ID               6
+#define IRQ_3_ID               7
+#define IRQ_4_ID               8
+#define IRQ_5_ID               9
+#define IRQ_6_ID               10
+#define IRQ_7_ID               11
 
 #define FPGA_DOWNLOAD_BUFFER_SIZE 500*1024
 
@@ -114,8 +121,36 @@ static struct subsystem fpga_download = {
     .id = FPGA_DOWNLOAD_ID,
 };
 
-static struct subsystem irq = {
-    .id = IRQ_ID,
+static struct subsystem irq0 = {
+    .id = IRQ_0_ID,
+};
+
+static struct subsystem irq1 = {
+    .id = IRQ_1_ID,
+};
+
+static struct subsystem irq2 = {
+    .id = IRQ_2_ID,
+};
+
+static struct subsystem irq3 = {
+    .id = IRQ_3_ID,
+};
+
+static struct subsystem irq4 = {
+    .id = IRQ_4_ID,
+};
+
+static struct subsystem irq5 = {
+    .id = IRQ_5_ID,
+};
+
+static struct subsystem irq6 = {
+    .id = IRQ_6_ID,
+};
+
+static struct subsystem irq7 = {
+    .id = IRQ_7_ID,
 };
 
 char registry[MAX_REGISTRY_SIZE];
@@ -371,15 +406,13 @@ void FPGA_Config(unsigned char* gridFilebuffer, int gridFileSize)
     }
 }
 
-DECLARE_WAIT_QUEUE_HEAD (irq0);
+DECLARE_WAIT_QUEUE_HEAD (EINT0);
 volatile unsigned char irq_flag = 0;
 static irqreturn_t irq_interrupt_irq0(int irq, void *dev_id, struct pt_regs *regs)
 {
-   unsigned long flag;
-   //	void* address;
    printk("<1>interrupt 0\n");
    irq_flag = 1;
-   wake_up(&irq0);
+   wake_up_interruptible(&EINT0);
    return IRQ_HANDLED;
 }
 
@@ -391,7 +424,7 @@ lophilo_init(void)
 	int result;
 
 	void* current_addr;
-	int i;
+	int i, ret;
 	u8 pwm_id = 0;
 	u8 gpio_id = 0;
 
@@ -425,69 +458,61 @@ lophilo_init(void)
 
     /** Set pin as GPIO input, without internal pull up */
     if(at91_set_gpio_input(AT91_PIN_PD10, 0)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD10);
+        printk(KERN_ERR"Could not set pin %i for GPIO input.\n", AT91_PIN_PD10);
     }
     if(at91_set_gpio_input(AT91_PIN_PD11, 0)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD11);
+        printk(KERN_ERR"Could not set pin %i for GPIO input.\n", AT91_PIN_PD11);
     }
     if(at91_set_gpio_input(AT91_PIN_PD13, 0)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD13);
+        printk(KERN_ERR"Could not set pin %i for GPIO input.\n", AT91_PIN_PD13);
     }
     if(at91_set_gpio_input(AT91_PIN_PD14, 0)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD14);
+        printk(KERN_ERR"Could not set pin %i for GPIO input.\n", AT91_PIN_PD14);
     }
     if(at91_set_gpio_input(AT91_PIN_PD17, 0)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD17);
+        printk(KERN_ERR"Could not set pin %i for GPIO input.\n", AT91_PIN_PD17);
     }
     if(at91_set_gpio_input(AT91_PIN_PD18, 0)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD18);
+        printk(KERN_ERR"Could not set pin %i for GPIO input.\n", AT91_PIN_PD18);
     }
     if(at91_set_gpio_input(AT91_PIN_PD19, 0)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PD19);
+        printk(KERN_ERR"Could not set pin %i for GPIO input.\n", AT91_PIN_PD19);
     }
     if(at91_set_gpio_input(AT91_PIN_PB0, 0)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO input.\n", AT91_PIN_PB0);
+        printk(KERN_ERR"Could not set pin %i for GPIO input.\n", AT91_PIN_PB0);
     }
 
     /** Set deglitch for pin */
     if(at91_set_deglitch(AT91_PIN_PD10, 1)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD10);
+        printk(KERN_ERR"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD10);
     }
     if(at91_set_deglitch(AT91_PIN_PD11, 1)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD11);
+        printk(KERN_ERR"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD11);
     }
     if(at91_set_deglitch(AT91_PIN_PD13, 1)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD13);
+        printk(KERN_ERR"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD13);
     }
     if(at91_set_deglitch(AT91_PIN_PD14, 1)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD14);
+        printk(KERN_ERR"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD14);
     }
     if(at91_set_deglitch(AT91_PIN_PD18, 1)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD18);
+        printk(KERN_ERR"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD18);
     }
     if(at91_set_deglitch(AT91_PIN_PD19, 1)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD19);
+        printk(KERN_ERR"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PD19);
     }
     if(at91_set_deglitch(AT91_PIN_PB0, 1)) {
-        printk(KERN_DEBUG"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PB0);
+        printk(KERN_ERR"Could not set pin %i for GPIO deglitch.\n", AT91_PIN_PB0);
     }
 
     /** Request IRQ for pin */
-    if(request_irq(AT91_PIN_PD10, irq_interrupt_irq0, IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, "irq_interrupt", NULL))  {
-        printk(KERN_DEBUG"Can't register IRQ %d\n", AT91_PIN_PC12);
-        return -EIO;
+    if(ret = request_irq(AT91_PIN_PD10, irq_interrupt_irq0, IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, "irq_interrupt", NULL))  {
+        printk(KERN_ERR"Can't register IRQ %d\n", AT91_PIN_PC12);
+        printk(KERN_ERR"ret = %d\n", ret);
+        //return -EIO;
     }
 
-	/* Request the IRQ */
-//    result = request_irq(AT91_PIN_PC12, irq_interrupt,
-//	IRQF_DISABLED //| IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
-//	, "IRQ_IRQ", NULL);
-//    //request_threaded_irq();
-//      if (result) {
-//        printk(KERN_INFO "usbd: can't get assigned irq %i\n",
-//        		AT91_PIN_PC12);
-//		return -EINVAL;
-//    }
+    printk(KERN_ERR "lizhizhou 2");
 
     debugfs_create_file(
         "data",
@@ -504,14 +529,61 @@ lophilo_init(void)
         &fops_mem
         );
 	debugfs_create_file(
-		"irq",
+		"EINT0",
 		S_IRWXU | S_IRWXG | S_IRWXO,
 		lophilo_dentry,
-		&irq,
+		&irq0,
 		&fops_mem
 		);
-
-    //init_fpga_config_io();
+	debugfs_create_file(
+		"EINT1",
+		S_IRWXU | S_IRWXG | S_IRWXO,
+		lophilo_dentry,
+		&irq1,
+		&fops_mem
+		);
+	debugfs_create_file(
+		"EINT2",
+		S_IRWXU | S_IRWXG | S_IRWXO,
+		lophilo_dentry,
+		&irq2,
+		&fops_mem
+		);
+	debugfs_create_file(
+		"EINT3",
+		S_IRWXU | S_IRWXG | S_IRWXO,
+		lophilo_dentry,
+		&irq3,
+		&fops_mem
+		);
+	debugfs_create_file(
+		"EINT4",
+		S_IRWXU | S_IRWXG | S_IRWXO,
+		lophilo_dentry,
+		&irq4,
+		&fops_mem
+		);
+	debugfs_create_file(
+		"EINT5",
+		S_IRWXU | S_IRWXG | S_IRWXO,
+		lophilo_dentry,
+		&irq5,
+		&fops_mem
+		);
+	debugfs_create_file(
+		"EINT6",
+		S_IRWXU | S_IRWXG | S_IRWXO,
+		lophilo_dentry,
+		&irq6,
+		&fops_mem
+		);
+	debugfs_create_file(
+		"EINT7",
+		S_IRWXU | S_IRWXG | S_IRWXO,
+		lophilo_dentry,
+		&irq7,
+		&fops_mem
+		);
 
 	//fpga = request_mem_region(FPGA_BASE_ADDR, SIZE16MB, "Lophilo FPGA LEDs");
 	sys_subsystem.vaddr = (u32) fpga_cs0_base;
@@ -666,7 +738,6 @@ map_lophilo(struct file *filp, struct vm_area_struct *vma)
 	return 0;
 }
 
-
 void __exit
 lophilo_cleanup(void)
 {
@@ -678,7 +749,6 @@ lophilo_cleanup(void)
 }
 
 /* Methods */
-
 /* Called when a process tries to open the device file, like
  * "cat /dev/mycharfile"
  */
@@ -695,7 +765,6 @@ static int device_open(struct inode *inode, struct file *file)
 
    return 0;
 }
-
 
 /* Called when a process closes the device file */
 static int device_release(struct inode *inode, struct file *file)
@@ -724,8 +793,9 @@ static ssize_t device_read(struct file *filp,
    	return 0;
    switch (subsystem_ptr->id)
    {
-	   case IRQ_ID:
-		   printk("Read irq\n");
+	   case IRQ_0_ID:
+		   interruptible_sleep_on(&EINT0);
+		   printk("Read irq 0\n");
 		   break;
 	   default:
 		   /* Actually put the data into the buffer */
@@ -784,7 +854,7 @@ static ssize_t device_write(struct file *filp,
                printk("No data to download\n");
            }
            break;
-       case IRQ_ID:
+       case IRQ_0_ID:
            printk("Clear irq\n");
     	   break;
        default:
