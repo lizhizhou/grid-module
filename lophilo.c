@@ -36,6 +36,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <mach/gpio.h>
+#include <linux/of_irq.h>
 
 
 // from linux/arch/arm/mach-at91/board-tabby.c
@@ -506,8 +507,8 @@ lophilo_init(void)
     }
 
     /** Request IRQ for pin */
-    if(ret = request_irq(AT91_PIN_PD10, irq_interrupt_irq0, IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, "irq_interrupt", NULL))  {
-        printk(KERN_ERR"Can't register IRQ %d\n", AT91_PIN_PC12);
+    if(ret = request_irq(AT91_PIN_PD10, irq_interrupt_irq0, IRQ_TYPE_EDGE_BOTH, "irq_interrupt", NULL))  {
+        printk(KERN_ERR"Can't register IRQ %d, mode %d\n", AT91_PIN_PD10, IRQ_TYPE_EDGE_BOTH);
         printk(KERN_ERR"ret = %d\n", ret);
         //return -EIO;
     }
@@ -745,6 +746,7 @@ lophilo_cleanup(void)
 	debugfs_remove_recursive(lophilo_dentry);
 	debugfs_remove_recursive(fpga_dentry);
 	//release_mem_region(FPGA_BASE_ADDR, SIZE16MB);
+    free_irq(AT91_PIN_PD10, irq_interrupt_irq0);
 	return;
 }
 
